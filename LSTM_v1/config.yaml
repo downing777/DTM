@@ -1,0 +1,9 @@
+model:
+  model_path: 'pillow_sales_lstm_model.pth'
+  feature_scaler_path: 'feature_scaler.pkl'
+  target_scaler_path: 'target_scaler.pkl'
+
+lstm_params:
+  input_size: 7
+  hidden_size: 50
+  output_size: 1
