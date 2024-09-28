@@ -49,6 +49,20 @@ class SalesPredictor():
         # 加载训练好的模型参数
         self.model.load_state_dict(torch.load(config['model_path']))
         self.model.eval()  # 设置为评估模式
+    
+    def update(self, past_features, hidden = None):
+        past_features = np.array(past_features).reshape(-1, self.params['input_size'])
+        if not hidden:
+            hidden = self.init_hidden
+        with torch.no_grad():
+            input_data = self.feature_scaler.transform(past_features)
+            
+            for i in range(input_data.shape[0]):
+                input = input_data[i]
+                input = torch.tensor(input, dtype = torch.float32).view(1,1,-1)  # 测试集的初始输入 (1, time_step, features)
+                _, hidden = self.model(input, hidden)
+        self.init_hidden = hidden
+        return 
 
     def predict(self, feature_params, hidden = None):
         """
@@ -107,6 +121,20 @@ class FeaturesPredictor():
         self.model.load_state_dict(torch.load(config['model_path']))
         self.model.eval()  # 设置为评估模式
     
+    def update(self, past_features, hidden = None):
+        past_features = np.array(past_features).reshape(-1, self.params['input_size'])
+        if not hidden:
+            hidden = self.init_hidden
+        with torch.no_grad():
+            input_data = self.feature_scaler.transform(past_features)
+            
+            for i in range(input_data.shape[0]):
+                input = input_data[i]
+                input = torch.tensor(input, dtype = torch.float32).view(1,1,-1)  # 测试集的初始输入 (1, time_step, features)
+                _, hidden = self.model(input, hidden)
+            self.init_hidden = hidden
+        return 
+    
     def predict(self, feature_params, hidden = None, cycle = 12):
         '''
         feature_params: ndarray([1, d]) or ndarray([d])
@@ -115,7 +143,9 @@ class FeaturesPredictor():
         if input_features.shape[0] > 1:
             print('too much input')
             return 
-
+        
+        if not hidden:
+            hidden = self.init_hidden
         with torch.no_grad():
             predictions = []
             input_data = self.feature_scaler.transform(input_features)
@@ -167,25 +197,7 @@ if __name__ == '__main__':
     print(sales_predictions.sum())
     plt.plot(sales_predictions)
     plt.show()
-    
-    #### optimization
-    #minimize part
-    # def sales_function(params):
-    #     init_featrures = np.array(params)
-    #     temp_features  = features_model.predict(init_featrures)
-    #     sales_features = np.zeros((temp_features.shape[0], sales_model.params['input_size']))
-    #     sales_features[:, 3:7] = temp_features
-    #     sales_features[:, 0] = np.arange(1, sales_features.shape[0] + 1)
-    #     sales_features[:, 2] = estimated_sales
-    #     sales_features[:, -1] = time_to_peak
-    #     sales_predictions = sales_model.predict(sales_features)
-    #     return -sum(sales_predictions)
 
-    # init_params = [unit_price, unit_cost, roi, profit_rate]
-    # param_bounds = [(70, 130), (40, 60), (0.5, 0.75), (0.3, 0.6)] 
-    # result = minimize(sales_function, init_params, bounds=param_bounds)
-    # print(f"Optimal input values: {result.x}")
-    # print(f"Maximum output: {-result.fun}")
 
 
     

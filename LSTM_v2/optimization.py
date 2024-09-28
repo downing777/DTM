@@ -50,6 +50,20 @@ class SalesPredictor():
         # 加载训练好的模型参数
         self.model.load_state_dict(torch.load(config['model_path']))
         self.model.eval()  # 设置为评估模式
+    
+    def update(self, past_features, hidden = None):
+        past_features = np.array(past_features).reshape(-1, self.params['input_size'])
+        if not hidden:
+            hidden = self.init_hidden
+        with torch.no_grad():
+            input_data = self.feature_scaler.transform(past_features)
+            
+            for i in range(input_data.shape[0]):
+                input = input_data[i]
+                input = torch.tensor(input, dtype = torch.float32).view(1,1,-1)  # 测试集的初始输入 (1, time_step, features)
+                _, hidden = self.model(input, hidden)
+        self.init_hidden = hidden
+        return 
 
     def predict(self, feature_params, hidden = None):
         """
@@ -57,7 +71,6 @@ class SalesPredictor():
         """
         # 解析特征
         idx_dict = {feature:idx for idx, feature in enumerate(self.feature_list)}
-        month_idx = idx_dict['Month']
         sales_idx = idx_dict['Sales_volume']
         input_data_scaled = self.feature_scaler.transform(feature_params)
         input_data = input_data_scaled[0]
@@ -107,6 +120,21 @@ class FeaturesPredictor():
         # 加载训练好的模型参数
         self.model.load_state_dict(torch.load(config['model_path']))
         self.model.eval()  # 设置为评估模式
+
+    def update(self, past_features, hidden = None):
+        past_features = np.array(past_features).reshape(-1, self.params['input_size'])
+        if not hidden:
+            hidden = self.init_hidden
+        with torch.no_grad():
+            input_data = self.feature_scaler.transform(past_features)
+            
+            for i in range(input_data.shape[0]):
+                input = input_data[i]
+                input = torch.tensor(input, dtype = torch.float32).view(1,1,-1)  # 测试集的初始输入 (1, time_step, features)
+                _, hidden = self.model(input, hidden)
+            self.init_hidden = hidden
+        return 
+
     
     def predict(self, feature_params, hidden = None, cycle = 12):
         '''
@@ -116,7 +144,8 @@ class FeaturesPredictor():
         if input_features.shape[0] > 1:
             print('too much input')
             return 
-
+        if not hidden:
+            hidden = self.init_hidden
         with torch.no_grad():
             predictions = []
             input_data = self.feature_scaler.transform(input_features)
@@ -134,21 +163,23 @@ class FeaturesPredictor():
         return predictions_rescaled
 
 if __name__ == '__main__':
-    # customized_params = {
-    #     'Estimated_sales':100000,
-    #     'Unit_price':130,
-    #     'Unit_cost':70,
-    #     'ROI':0.6,
-    #     'Profit_rate': 0.35,
-    #     'Time_to_peak': 3
-    # }
+   
+    #what if 仿真
+    #假设我们已经有了一段时间的历史数据，需要更新一下模型的hidden数据
+    #历史数据分为两块，一部分是['Unit_price', 'Unit_cost', 'ROI', 'Profit_rate']，用于更新features_model
+    # 一部分是['Month', 'Sales_volume', 'Total_sales', 'Unit_price', 'Unit_cost', 'ROI', 'Profit_rate', 'Time_to_peak']整体,一部分用于更新sales_model
+    sales_model = SalesPredictor()
+    features_model = FeaturesPredictor()
+    #假设这是历史数据,后期应用应该替换为真实的近期数据
+    # sales_past_features = pd.read_csv('./Dataset/pillow_features.csv')[sales_model.feature_list][-6:].values#替换为真实的历史数据
+    # featrues_past_features = pd.read_csv('./Dataset/pillow_features.csv')[features_model.feature_list][-6:].values
+    # sales_model.update(sales_past_features)
+    # features_model.update(featrues_past_features)
 
-    # 定义 LSTM 预测函数 (该函数根据你训练好的 LSTM 模型实现)
+    
+    # 定义 LSTM 预测函数 (该函数根据你训练并更新好的 LSTM 模型实现)
     def lstm_predict(params):
         estimated_sales, unit_price, unit_cost, roi, profit_rate, time_to_peak  = params
-        #loading the models
-        sales_model = SalesPredictor()
-        features_model = FeaturesPredictor()
 
         # #features prediction
         init_featrures = np.array([unit_price, unit_cost, roi, profit_rate])
@@ -179,7 +210,7 @@ if __name__ == '__main__':
     # 参数的上下界，分别为 [price, cost, ROI]
     gene_space = [
         {'low': 50000, 'high': 200000},  
-        {'low': 70, 'high': 130},  
+        {'low': 90, 'high': 130},  
         {'low': 30, 'high': 70},  
         {'low': 0.5, 'high': 0.7},  
         {'low': 0.3, 'high': 0.6},  
