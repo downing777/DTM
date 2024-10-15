@@ -1,0 +1,13 @@
+sales_model:
+  model_path: './Models/pillow_total_sales_model.pth'
+  feature_scaler_path: './Models/sales_feature_scaler.pkl'
+  target_scaler_path: './Models/sales_target_scaler.pkl'
+  feature_list: ['Month', 'Sales_volume', 'Total_sales', 'Unit_price', 'Unit_cost', 'ROI', 'Profit_rate', 'Time_to_peak']
+  params: {'input_size': 8, 'hidden_size': 50, 'output_size': 1}
+
+features_model:
+  model_path: './Models/pillow_features_model.pth'
+  feature_scaler_path: './Models/features_scaler.pkl'
+  feature_list: ['Unit_price', 'Unit_cost', 'ROI', 'Profit_rate']
+  params: {'input_size': 4, 'hidden_size': 64, 'output_size': 4}
+  
